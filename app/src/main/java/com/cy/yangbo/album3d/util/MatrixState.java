@@ -17,7 +17,8 @@ public class MatrixState {
 
     public static void setInitStack(){
         currMatrix = new float[16];
-        Matrix.setRotateM(currMatrix, 0, 0, 1, 0, 0);
+//        Matrix.setRotateM(currMatrix, 0, 0, 1, 0, 0);
+        Matrix.setIdentityM(currMatrix, 0);
     }
 
     public static void pushMatrix(){

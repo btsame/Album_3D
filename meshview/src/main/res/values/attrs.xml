@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <declare-styleable name="MeshView">
+        <attr name="row" format="integer" />
+        <attr name="column" format="integer" />
+
+        <attr name="showBorder" format="boolean" />
+        <attr name="lineColor" format="color" />
+        <attr name="lineWidth" format="dimension" />
+    </declare-styleable>
+
+</resources>

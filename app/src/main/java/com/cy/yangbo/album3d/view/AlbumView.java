@@ -5,8 +5,8 @@ import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
 import android.util.AttributeSet;
 
-import com.cy.yangbo.album3d.util.Cube;
 import com.cy.yangbo.album3d.util.MatrixState;
+import com.cy.yangbo.album3d.util.TextureCube;
 
 import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
@@ -18,7 +18,7 @@ public class AlbumView extends GLSurfaceView{
 
     private Renderer mRenderer;
 
-    private Cube mCube;
+    private TextureCube mCube;
 
     public AlbumView(Context context, AttributeSet attrs) {
         super(context, attrs);
@@ -39,9 +39,7 @@ public class AlbumView extends GLSurfaceView{
             MatrixState.setCamere(0.0f, 0.0f, -0.5f,
                     0.0f, 0.0f, -5.0f,
                     0.0f, 1.0f, 0.0f);
-            mCube = new Cube(AlbumView.this);
-            mCube.initVertexData();
-            mCube.initShader();
+            mCube = new TextureCube(AlbumView.this);
         }
 
         @Override
@@ -49,7 +47,8 @@ public class AlbumView extends GLSurfaceView{
             GLES20.glViewport(0, 0, width, height);
             float ratio = (float)width / height;
 
-            MatrixState.setProjectFrustum(-ratio, ratio, -1.0f, 1.0f, 1.0f, 10.0f);
+//            MatrixState.setProjectFrustum(-ratio, ratio, -1.0f, 1.0f, 1.0f, 10.0f);
+            MatrixState.setProjectFrustum(-ratio, ratio, -1.0f, 1.0f, 2.0f, 10.0f);
         }
 
         @Override

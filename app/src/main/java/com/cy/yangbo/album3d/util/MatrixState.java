@@ -65,9 +65,12 @@ public class MatrixState {
 
     public static float[] getFinalMatrix(){
         mMVPMatrix = new float[16];
-        Matrix.multiplyMM(mMVPMatrix, 0, mVMatrix, 0, currMatrix, 0);//将摄像机矩阵乘以变换矩阵
+        //Matrix.multiplyMM(mMVPMatrix, 0, mVMatrix, 0, currMatrix, 0);//将摄像机矩阵乘以变换矩阵
+
+        Matrix.multiplyMM(mMVPMatrix, 0, currMatrix, 0, mVMatrix, 0);//将摄像机矩阵乘以变换矩阵
 
         Matrix.multiplyMM(mMVPMatrix, 0, mProjMatrix, 0, mMVPMatrix, 0);//将投影矩阵乘以上一步结果得到最终矩阵
+
         return mMVPMatrix;
     }
 }

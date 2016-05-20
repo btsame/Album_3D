@@ -1,9 +1,11 @@
 package com.cy.yangbo.album3d.util;
 
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.opengl.GLES20;
 import android.opengl.GLSurfaceView;
-import android.os.SystemClock;
+import android.opengl.GLUtils;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -16,26 +18,27 @@ import java.nio.FloatBuffer;
 /**
  * Created by Administrator on 2016/5/17.
  */
-public class Cube {
+public class TextureSquare {
 
     private static final int BYTES_PER_FLOAT = 4;
     private static final int POSITION_DATA_SIZE = 3;
-    private static final int COLOR_DATA_SIZE = 4;
+    private static final int TEXTURE_DATA_SIZE = 2;
 
     private GLSurfaceView mGLSurfaceView;
     private FloatBuffer mCoordBuffer;
-    private FloatBuffer mColorBuffer;
+    private FloatBuffer mTextureBuffer;
 
     int vertexShaderHandle, fragmentShaderHandle, programHandle;
-    int mMVPMatrixHandle, mPositionHandle, mColorHandle;
+    int mMVPMatrixHandle, mPositionHandle, mTextureHandle;
 
 
 
-    public Cube(GLSurfaceView glSurfaceView){
+    public TextureSquare(GLSurfaceView glSurfaceView){
         this.mGLSurfaceView = glSurfaceView;
 
         initVertexData();
         initShader();
+        initTexture();
     }
 
     public void initVertexData(){
@@ -43,16 +46,16 @@ public class Cube {
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
         mCoordBuffer.put(cubePosition).position(0);
 
-        mColorBuffer = ByteBuffer.allocateDirect(cubeColor.length * BYTES_PER_FLOAT)
+        mTextureBuffer = ByteBuffer.allocateDirect(cubeTexture.length * BYTES_PER_FLOAT)
                 .order(ByteOrder.nativeOrder()).asFloatBuffer();
-        mColorBuffer.put(cubeColor).position(0);
+        mTextureBuffer.put(cubeTexture).position(0);
     }
 
     public void initShader(){
         vertexShaderHandle = GLES20.glCreateShader(GLES20.GL_VERTEX_SHADER);
         if(vertexShaderHandle != 0){
             GLES20.glShaderSource(vertexShaderHandle,
-                    readAssetShaderStr("positionShader_new.gl", mGLSurfaceView.getContext()));
+                    readAssetShaderStr("positionShader_texture.gl", mGLSurfaceView.getContext()));
             GLES20.glCompileShader(vertexShaderHandle);
 
             final int[] compileStatus = new int[1];
@@ -70,7 +73,7 @@ public class Cube {
         fragmentShaderHandle = GLES20.glCreateShader(GLES20.GL_FRAGMENT_SHADER);
         if(fragmentShaderHandle != 0){
             GLES20.glShaderSource(fragmentShaderHandle,
-                    readAssetShaderStr("fragmentShader.gl", mGLSurfaceView.getContext()));
+                    readAssetShaderStr("fragmentShader_texture.gl", mGLSurfaceView.getContext()));
             GLES20.glCompileShader(fragmentShaderHandle);
 
             final int[] compileStatus = new int[1];
@@ -91,7 +94,7 @@ public class Cube {
             GLES20.glAttachShader(programHandle, fragmentShaderHandle);
 
             GLES20.glBindAttribLocation(programHandle, 0, "aPosition");
-            GLES20.glBindAttribLocation(programHandle, 1, "aColor");
+            GLES20.glBindAttribLocation(programHandle, 1, "aTexCoor");
 
             GLES20.glLinkProgram(programHandle);
 
@@ -137,131 +140,88 @@ public class Cube {
     }
 
     public void drawSelf(){
-        long time = SystemClock.currentThreadTimeMillis() % 10000L;
-        float degree = (360.0f / 10000.0f) * ((int)time);
         GLES20.glUseProgram(programHandle);
         mMVPMatrixHandle = GLES20.glGetUniformLocation(programHandle, "uMVPMatrix");
         mPositionHandle = GLES20.glGetAttribLocation(programHandle, "aPosition");
-        mColorHandle = GLES20.glGetAttribLocation(programHandle, "aColor");
+        mTextureHandle = GLES20.glGetAttribLocation(programHandle, "aTexCoor");
 
         MatrixState.setInitStack();
         MatrixState.translate(0.0f, 0.0f, -5.0f);
-        MatrixState.rotate(degree, 1.0f, 1.0f, 0.0f);
 
         mCoordBuffer.position(0);
         GLES20.glVertexAttribPointer(mPositionHandle, POSITION_DATA_SIZE, GLES20.GL_FLOAT, false,
                 0, mCoordBuffer);
         GLES20.glEnableVertexAttribArray(mPositionHandle);
 
-        mColorBuffer.position(0);
-        GLES20.glVertexAttribPointer(mColorHandle, COLOR_DATA_SIZE, GLES20.GL_FLOAT, false,
-                0, mColorBuffer);
-        GLES20.glEnableVertexAttribArray(mColorHandle);
+        mTextureBuffer.position(0);
+        GLES20.glVertexAttribPointer(mTextureHandle, TEXTURE_DATA_SIZE, GLES20.GL_FLOAT, false,
+                0, mTextureBuffer);
+        GLES20.glEnableVertexAttribArray(mTextureHandle);
 
         GLES20.glUniformMatrix4fv(mMVPMatrixHandle, 1, false, MatrixState.getFinalMatrix(), 0);
-        GLES20.glDrawArrays(GLES20.GL_TRIANGLES, 0, 36);
+
+        GLES20.glActiveTexture(GLES20.GL_TEXTURE0);
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
+
+        GLES20.glDrawArrays(GLES20.GL_TRIANGLE_STRIP, 0, 4);
+    }
+
+    private int textureId;
+    private void initTexture(){
+        int[] textures = new int[1];
+        GLES20.glGenTextures(1, textures, 0);
+
+        if(textures[0] == -1){
+            throw new RuntimeException("failed to generate texture!");
+        }
+
+        textureId = textures[0];
+        GLES20.glBindTexture(GLES20.GL_TEXTURE_2D, textureId);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MIN_FILTER, GLES20.GL_NEAREST);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_MAG_FILTER, GLES20.GL_LINEAR);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_S, GLES20.GL_CLAMP_TO_EDGE);
+        GLES20.glTexParameterf(GLES20.GL_TEXTURE_2D, GLES20.GL_TEXTURE_WRAP_T, GLES20.GL_CLAMP_TO_EDGE);
+
+        Bitmap texBitmap = readStandardTexture("mm.jpg");
+        GLUtils.texImage2D(GLES20.GL_TEXTURE_2D, 0, texBitmap, 0);
+        texBitmap.recycle();
+    }
+
+    private Bitmap readStandardTexture(String imageName){
+        BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        Bitmap bitmap = null;
+        InputStream is = null;
+        try {
+            is = mGLSurfaceView.getContext().getAssets().open(imageName);
+            bitmap = BitmapFactory.decodeStream(is, null, options);
+            if(options.outWidth % 2 != 0 || options.outHeight % 2 != 0){
+                options.outWidth = options.outWidth - options.outWidth % 2;
+                options.outHeight = options.outHeight - options.outHeight % 2;
+            }
+            options.inJustDecodeBounds = false;
+            bitmap = BitmapFactory.decodeStream(is, null, options);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return bitmap;
     }
 
     final float cubePosition[] =
             {
-                    // Front face
-                    -1.0f, 1.0f, 1.0f,
-                    -1.0f, -1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f,
                     -1.0f, -1.0f, 1.0f,
                     1.0f, -1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f,
-
-                    // Right face
-                    1.0f, 1.0f, 1.0f,
-                    1.0f, -1.0f, 1.0f,
-                    1.0f, 1.0f, -1.0f,
-                    1.0f, -1.0f, 1.0f,
-                    1.0f, -1.0f, -1.0f,
-                    1.0f, 1.0f, -1.0f,
-
-                    // Back face
-                    1.0f, 1.0f, -1.0f,
-                    1.0f, -1.0f, -1.0f,
-                    -1.0f, 1.0f, -1.0f,
-                    1.0f, -1.0f, -1.0f,
-                    -1.0f, -1.0f, -1.0f,
-                    -1.0f, 1.0f, -1.0f,
-
-                    // Left face
-                    -1.0f, 1.0f, -1.0f,
-                    -1.0f, -1.0f, -1.0f,
                     -1.0f, 1.0f, 1.0f,
-                    -1.0f, -1.0f, -1.0f,
-                    -1.0f, -1.0f, 1.0f,
-                    -1.0f, 1.0f, 1.0f,
-
-                    // Top face
-                    -1.0f, 1.0f, -1.0f,
-                    -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, -1.0f,
-                    -1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, 1.0f,
-                    1.0f, 1.0f, -1.0f,
-
-                    // Bottom face
-                    1.0f, -1.0f, -1.0f,
-                    1.0f, -1.0f, 1.0f,
-                    -1.0f, -1.0f, -1.0f,
-                    1.0f, -1.0f, 1.0f,
-                    -1.0f, -1.0f, 1.0f,
-                    -1.0f, -1.0f, -1.0f,
+                    1.0f, 1.0f, 1.0f
             };
 
-    final float[] cubeColor =
+    final float[] cubeTexture =
             {
-                    // Front face (red)
-                    1.0f, 0.0f, 0.0f, 1.0f,
-                    1.0f, 0.0f, 0.0f, 1.0f,
-                    1.0f, 0.0f, 0.0f, 1.0f,
-                    1.0f, 0.0f, 0.0f, 1.0f,
-                    1.0f, 0.0f, 0.0f, 1.0f,
-                    1.0f, 0.0f, 0.0f, 1.0f,
-
-                    // Right face (green)
-                    0.0f, 1.0f, 0.0f, 1.0f,
-                    0.0f, 1.0f, 0.0f, 1.0f,
-                    0.0f, 1.0f, 0.0f, 1.0f,
-                    0.0f, 1.0f, 0.0f, 1.0f,
-                    0.0f, 1.0f, 0.0f, 1.0f,
-                    0.0f, 1.0f, 0.0f, 1.0f,
-
-                    // Back face (blue)
-                    0.0f, 0.0f, 1.0f, 1.0f,
-                    0.0f, 0.0f, 1.0f, 1.0f,
-                    0.0f, 0.0f, 1.0f, 1.0f,
-                    0.0f, 0.0f, 1.0f, 1.0f,
-                    0.0f, 0.0f, 1.0f, 1.0f,
-                    0.0f, 0.0f, 1.0f, 1.0f,
-
-                    // Left face (yellow)
-                    1.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, 1.0f, 0.0f, 1.0f,
-                    1.0f, 1.0f, 0.0f, 1.0f,
-
-                    // Top face (cyan)
-                    0.0f, 1.0f, 1.0f, 1.0f,
-                    0.0f, 1.0f, 1.0f, 1.0f,
-                    0.0f, 1.0f, 1.0f, 1.0f,
-                    0.0f, 1.0f, 1.0f, 1.0f,
-                    0.0f, 1.0f, 1.0f, 1.0f,
-                    0.0f, 1.0f, 1.0f, 1.0f,
-
-                    // Bottom face (magenta)
-                    1.0f, 0.0f, 1.0f, 1.0f,
-                    1.0f, 0.0f, 1.0f, 1.0f,
-                    1.0f, 0.0f, 1.0f, 1.0f,
-                    1.0f, 0.0f, 1.0f, 1.0f,
-                    1.0f, 0.0f, 1.0f, 1.0f,
-                    1.0f, 0.0f, 1.0f, 1.0f
+                    0.0f, 1.0f,
+                    1.0f, 1.0f,
+                    0.0f, 0.0f,
+                    1.0f, 0.0f
             };
 
 }
